@@ -29,7 +29,7 @@ document.getElementById("yeastSearch").addEventListener("input", filterYeastTabl
       {% else %}📦{% endif %}
       {{ category }} Yeasts
     </h2></summary>
-    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+    <table class="responsive-table" style="width: 100%; border-collapse: collapse; margin-top: 10px;">
       <thead>
         <tr style="background-color: #333; color: #fff;">
           <th>Name</th>
@@ -47,15 +47,15 @@ document.getElementById("yeastSearch").addEventListener("input", filterYeastTabl
       <tbody>
         {% for yeast in yeast_list %}
         <tr class="yeast-row" style="background-color: {% if loop.index0 % 2 == 0 %}#111{% else %}#1a1a1a{% endif %}; color: #eee;">
-          <td>{{ yeast.name }}</td>
-          <td>{{ yeast.tolerance or '—' }}</td>
-          <td>{{ yeast.strength or '—' }}</td>
-          <td>{{ yeast.sweetness_retention or '—' }}</td>
-          <td>{{ yeast.flocculation or '—' }}</td>
-          <td>{{ yeast.attenuation or '—' }}</td>
-          <td>{{ yeast.notes or '—' }}</td>
+          <td data-label='Name'>{{ yeast.name }}</td>
+          <td data-label='Tolerance'>{{ yeast.tolerance or '—' }}</td>
+          <td data-label='Strength'>{{ yeast.strength or '—' }}</td>
+          <td data-label='Sweetness'>{{ yeast.sweetness_retention or '—' }}</td>
+          <td data-label='Flocculation'>{{ yeast.flocculation or '—' }}</td>
+          <td data-label='Attenuation'>{{ yeast.attenuation or '—' }}</td>
+          <td data-label='Notes'>{{ yeast.notes or '—' }}</td>
           {% if current_user.role == 'admin' %}
-          <td>
+          <td data-label="Actions">
             {% if not yeast.is_default %}
               <form method="POST" action="{{ url_for('routes.yeast_bp.delete_yeast', yeast_id=yeast.id) }}" style="display:inline;" onsubmit="return confirm('Delete this yeast?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

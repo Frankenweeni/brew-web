@@ -6,9 +6,9 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
   <input type="number" step="0.1" name="original_volume"><br>
   <label>Original Gravity:</label>
-  <input type="number" step="0.001" name="original_gravity"><br>
+  <input type="number" step="0.001" name="original_gravity" min="0.900" max="1.300"><br>
   <label>Target Gravity:</label>
-  <input type="number" step="0.001" name="target_gravity"><br>
+  <input type="number" step="0.001" name="target_gravity" min="0.900" max="1.300"><br>
   <button type="submit">Calculate</button>
 </form>
 

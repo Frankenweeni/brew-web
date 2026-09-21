@@ -63,7 +63,7 @@
 <h2>Measurements</h2>
 
 {% if batch.measurements %}
-  <table style="width: 100%; border-collapse: collapse; margin-top: 1em;">
+  <table class="responsive-table" style="width: 100%; border-collapse: collapse; margin-top: 1em;">
 <thead>
 <tr style="background-color: #333; color: #fff;">
 <th style="padding: 10px;">Date</th>
@@ -77,10 +77,10 @@
 <tbody>
       {% for m in batch.measurements|sort(attribute='date') %}
       <tr style="background-color: {% if loop.index0 % 2 == 0 %}#111{% else %}#1a1a1a{% endif %}; color: #eee;">
-<td style="padding: 10px;">{{ m.date.strftime('%Y-%m-%d') if m.date else '—' }}</td>
-<td style="padding: 10px;">{{ m.gravity if m.gravity is not none else 'N/A' }}</td>
-<td style="padding: 10px;">{{ m.ph if m.ph is not none else 'N/A' }}</td>
-<td style="padding: 10px;">
+<td data-label="Date" style="padding: 10px;">{{ m.date.strftime('%Y-%m-%d') if m.date else '—' }}</td>
+<td data-label="Gravity" style="padding: 10px;">{{ m.gravity if m.gravity is not none else 'N/A' }}</td>
+<td data-label="pH" style="padding: 10px;">{{ m.ph if m.ph is not none else 'N/A' }}</td>
+<td data-label="Temp" style="padding: 10px;">
   {% if m.temperature is not none %}
     {% if unit_preference == 'metric' %}
       {{ ((m.temperature - 32) * 5 / 9)|round(1) }} °C ({{ m.temperature }} °F)
@@ -91,8 +91,8 @@
     N/A
   {% endif %}
 </td>
-<td style="padding: 10px;">{{ m.notes or '—' }}</td>
-<td style="padding: 10px;">
+<td data-label="Notes" style="padding: 10px;">{{ m.notes or '—' }}</td>
+<td data-label="Actions" style="padding: 10px;">
 <form action="{{ url_for('routes.delete_measurement', measurement_id=m.id) }}" method="POST" onsubmit="return confirm('Delete this measurement?');" style="display:inline;"><input name="csrf_token" type="hidden" value="{{ csrf_token() }}"/>
 <button style="color: red;" title="Delete" type="submit">✗</button>
 </form>

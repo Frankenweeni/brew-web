@@ -6,10 +6,10 @@
 <form method="POST">
   <label for="og">Original Gravity (OG):</label><br>
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-  <input type="number" name="og" step="0.001" required><br><br>
+  <input type="number" name="og" step="0.001" min="0.900" max="1.300" required><br><br>
 
   <label for="fg">Final Gravity (FG):</label><br>
-  <input type="number" name="fg" step="0.001" required><br><br>
+  <input type="number" name="fg" step="0.001" min="0.900" max="1.300" required><br><br>
 
   <button type="submit">Calculate ABV</button>
 </form>

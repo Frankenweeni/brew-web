@@ -73,7 +73,7 @@ def view_recipe(recipe_id):
             unit_label = 'liters'
 
         if units == 'metric':
-            base_amount = round((ing.amount_per_gallon or 0) / GALLON_TO_LITER, 2)
+            base_amount = round((ing.amount_per_gallon or 0) * GALLON_TO_LITER, 2)
             scaled_amount = round(base_amount * target_batch, 2)
         else:
             base_amount = ing.amount_per_gallon or 0

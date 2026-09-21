@@ -33,7 +33,7 @@
 {% endif %}
 
 <h2>Users</h2>
-<table>
+<table class="responsive-table">
   <tr>
     <th>Username</th>
     <th>Role</th>
@@ -41,14 +41,14 @@
   </tr>
   {% for user in users %}
   <tr>
-    <td>{{ user.username }}</td>
-    <td>{{ user.role }}</td>
-    <td>
-      <form action="{{ url_for('routes.admin_bp.delete_user', user_id=user.id) }}" method="post" style="display:inline;">
+    <td data-label="Username">{{ user.username }}</td>
+    <td data-label="Role">{{ user.role }}</td>
+    <td data-label="Actions">
+      <form action="{{ url_for('routes.admin_bp.delete_user', user_id=user.id) }}" method="post" style="display:inline-block; margin: 2px 4px 2px 0;">
         <input name="csrf_token" type="hidden" value="{{ csrf_token() }}"/>
         <button type="submit">🗑️ Delete</button>
       </form>
-      <form action="{{ url_for('routes.admin_bp.update_password', user_id=user.id) }}" method="post" style="display:inline;">
+      <form action="{{ url_for('routes.admin_bp.update_password', user_id=user.id) }}" method="post" style="display:inline-block; margin: 2px 0;">
         <input name="csrf_token" type="hidden" value="{{ csrf_token() }}"/>
         <input name="password" placeholder="New Password" required>
         <button type="submit">🔒 Reset Password</button>
@@ -96,17 +96,17 @@
 </form>
 
 {% if backups %}
-<table>
+<table class="responsive-table">
   <tr>
     <th>Filename</th>
     <th>Actions</th>
   </tr>
   {% for backup in backups %}
   <tr>
-    <td>{{ backup }}</td>
-    <td>
+    <td data-label="Filename">{{ backup }}</td>
+    <td data-label="Actions">
       <a href="{{ url_for('routes.admin_bp.download_backup', filename=backup) }}">⬇️ Download</a>
-      <form action="{{ url_for('routes.admin_bp.delete_backup', filename=backup) }}" method="post" style="display:inline;">
+      <form action="{{ url_for('routes.admin_bp.delete_backup', filename=backup) }}" method="post" style="display:inline-block; margin: 2px 0 2px 8px;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" onclick="return confirm('Delete this backup?');">🗑️ Delete</button>
       </form>
