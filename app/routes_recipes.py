@@ -16,9 +16,10 @@ def index():
     mead_recipes = Recipe.query.filter_by(alcohol_type='Mead').order_by(Recipe.name.asc()).all()
     wine_recipes = Recipe.query.filter_by(alcohol_type='Wine').order_by(Recipe.name.asc()).all()
     beer_recipes = Recipe.query.filter_by(alcohol_type='Beer').order_by(Recipe.name.asc()).all()
-    other_recipes = Recipe.query.filter(Recipe.alcohol_type == None).order_by(Recipe.name.asc()).all()
+    cider_recipes = Recipe.query.filter_by(alcohol_type='Hard Cider').order_by(Recipe.name.asc()).all()
+    other_recipes = Recipe.query.filter(~Recipe.alcohol_type.in_(["Mead", "Wine", "Beer", "Hard Cider"]) | (Recipe.alcohol_type == None)).order_by(Recipe.name.asc()).all()
     return render_template('index.html', mead_recipes=mead_recipes, wine_recipes=wine_recipes,
-                           beer_recipes=beer_recipes, other_recipes=other_recipes)
+                           beer_recipes=beer_recipes, cider_recipes=cider_recipes, other_recipes=other_recipes)
 
 @recipes_bp.route('/recipes/new', methods=['GET', 'POST'])
 @login_required
@@ -83,7 +84,7 @@ def view_recipe(recipe_id):
             unit_label = 'liters'
 
         if units == 'metric':
-            base_amount = round((ing.amount_per_gallon or 0) / GALLON_TO_LITER, 2)
+            base_amount = round((ing.amount_per_gallon or 0) * GALLON_TO_LITER, 2)
             scaled_amount = round(base_amount * target_batch, 2)
         else:
             base_amount = ing.amount_per_gallon or 0

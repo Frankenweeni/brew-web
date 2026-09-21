@@ -130,3 +130,164 @@ body.dark-mode .ql-editor::before {
     background-color: #f3f3f3;
     color: #111;
 }
+
+/* --- Mobile responsive layout --- */
+.mobile-menu-toggle {
+  display: none;
+  width: 100%;
+  background-color: #3e2a17;
+  color: #f4e8c1;
+  border: 1px solid #f4e8c1;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 1em;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.light-mode .mobile-menu-toggle {
+  background-color: #eee;
+  color: #111;
+  border-color: #999;
+}
+
+@media (max-width: 768px) {
+    .sidebar img { max-width: 60px !important; display: block; margin: 0 auto 6px; }
+  .page-container {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+    box-sizing: border-box;
+    padding: 8px;
+  }
+  .mobile-menu-toggle {
+    display: block;
+  }
+  .sidebar-nav {
+    display: none;
+    flex-direction: column;
+  }
+  .sidebar-nav.nav-open {
+    display: flex;
+  }
+  .main-content {
+    padding: 12px;
+    box-sizing: border-box;
+  }
+h1 { font-size: 1.5em; margin: 0.5em 0; }
+h2 { font-size: 1.15em; margin: 0.5em 0; }
+  .banner h1 {
+    font-size: 1.3em;
+  }
+table { width: auto !important; min-width: 560px; font-size: 0.85em; }
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+  input, select, textarea, button {
+    font-size: 16px;
+  }
+}
+
+/* --- Form field theming (inputs, selects, textareas, buttons) --- */
+input, select, textarea {
+  font-family: inherit;
+  font-size: 1em;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #555;
+}
+
+button, input[type="submit"] {
+  font-family: inherit;
+  font-size: 1em;
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid #a77c3b;
+  background-color: #3e2a17;
+  color: #f4e8c1;
+  cursor: pointer;
+}
+
+button:hover, input[type="submit"]:hover {
+  background-color: #5b3a1a;
+}
+
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea {
+  background-color: #1e1e1e;
+  color: #f4e8c1;
+  border-color: #555;
+}
+
+body.dark-mode select option {
+  background-color: #1e1e1e;
+  color: #f4e8c1;
+}
+
+body.light-mode input,
+body.light-mode select,
+body.light-mode textarea {
+  background-color: #fff;
+  color: #111;
+  border-color: #ccc;
+}
+
+body.light-mode button,
+body.light-mode input[type="submit"] {
+  background-color: #eee;
+  color: #111;
+  border-color: #999;
+}
+
+body.light-mode button:hover,
+body.light-mode input[type="submit"]:hover {
+  background-color: #ddd;
+}
+
+@media (max-width: 768px) {
+  table.responsive-table thead {
+    display: none;
+  }
+  table.responsive-table, table.responsive-table tbody, table.responsive-table tr, table.responsive-table td {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+  table.responsive-table {
+    border: none;
+  }
+  table.responsive-table tr {
+    margin-bottom: 14px;
+    border: 1px solid #555;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  table.responsive-table td {
+    padding: 8px 10px !important;
+    border: none !important;
+    border-bottom: 1px solid #333 !important;
+    text-align: left;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  table.responsive-table td:last-child {
+    border-bottom: none !important;
+  }
+  table.responsive-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-weight: bold;
+    font-size: 0.8em;
+    color: #d8b978;
+    margin-bottom: 2px;
+  }
+  table.responsive-table td[data-label=""]::before {
+    content: none;
+    margin-bottom: 0;
+  }
+}

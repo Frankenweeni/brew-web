@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <title>Brew Log</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -16,7 +17,8 @@
                 <a href="{{ url_for('routes.index') }}">
                     <img src="{{ url_for('static', filename='images/bw-logo.png') }}" alt="Brew Web Logo" style="max-width: 100%; margin-bottom: 20px;">
                 </a>
-                <ul>
+<button class="mobile-menu-toggle" onclick="toggleMobileNav()">☰ Menu</button>
+                <ul id="main-nav" class="sidebar-nav">
                     <li><a href="{{ url_for('routes.index') }}">🏠 Home/Recipes</a></li>
                     {% if current_user.is_authenticated and (current_user.role == 'admin' or current_user.role == 'editor') %}
                         <li><a href="{{ url_for('routes.recipes_bp.new_recipe') }}">➕ Add Recipe</a></li>
@@ -66,6 +68,10 @@
     const el = document.getElementById(id);
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
   }
+function toggleMobileNav() {
+const nav = document.getElementById("main-nav");
+nav.classList.toggle("nav-open");
+}
 	</script>
 </body>
 
