@@ -62,6 +62,8 @@ class Batch(db.Model):
     backsweetened = db.Column(db.Boolean)
     flavor_additions = db.Column(db.Text)
     pectic_used = db.Column(db.Boolean)
+    priming_sugar_amount = db.Column(db.Float, comment="Priming/carbonation sugar added before bottling, in grams")
+    priming_sugar_type = db.Column(db.String(20))
     notes = db.Column(db.Text)
     water_type = db.Column(db.String(50))
     alcohol_type = db.Column(db.String(20))

@@ -58,6 +58,14 @@
 <p><strong>Flavor Additions:</strong> {{ batch.flavor_additions or 'None' }}</p>
 <p><strong>Pectic Enzyme Used:</strong> {{ 'Yes' if batch.pectic_used else 'No' }}</p>
 <p><strong>Backsweetened:</strong> {{ 'Yes' if batch.backsweetened else 'No' }}</p>
+<p><strong>Priming Sugar:</strong>
+  {% if batch.priming_sugar_amount %}
+    {{ batch.priming_sugar_amount }} g{% if batch.priming_sugar_type %} ({{ batch.priming_sugar_type }}){% endif %}
+  {% else %}
+    None
+  {% endif %}
+  <a href="{{ url_for('routes.calculator_bp.calculator_carbonation') }}" style="margin-left: 10px; font-size: 0.9em;">🧮 Carbonation calculator</a>
+</p>
 <p><strong>Notes:</strong><br/> {{ batch.notes | nl2br if batch.notes else 'None' }}</p>
 <hr/>
 <h2>Measurements</h2>
@@ -124,7 +132,7 @@
     <h4>Schedule:</h4>
     <ul>
       {% for i in range(4) %}
-        <li>Day {{ i }} ({{ (batch.start_date + timedelta(days=i)).strftime('%Y-%m-%d') }}): 
+        <li>Day {{ i }} ({{ (batch.start_date + timedelta(days=i)).strftime('%Y-%m-%d') }}):
           {{ batch.tosna_per_day }} g (~{{ (batch.tosna_per_day / 1.25) | round(2) }} tsp)
         </li>
       {% endfor %}

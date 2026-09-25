@@ -129,6 +129,11 @@ def edit_batch(batch_id):
         batch.tosna_enabled = 'enable_tosna' in request.form
         batch.backsweetened = 'backsweetened' in request.form
         batch.pectic_used = 'pectic_used' in request.form
+        try:
+            batch.priming_sugar_amount = round(float(request.form.get('priming_sugar_amount')), 2)
+        except (TypeError, ValueError):
+            batch.priming_sugar_amount = None
+        batch.priming_sugar_type = request.form.get('priming_sugar_type') or None
         batch.flavor_additions = request.form.get('flavor_additions') or None
         batch.notes = request.form.get('notes') or None
 
@@ -247,6 +252,12 @@ def new_batch():
             flash("Could not calculate TOSNA due to missing or invalid values.", "warning")
             tosna_enabled = False
 
+        try:
+            priming_sugar_amount = round(float(request.form.get('priming_sugar_amount')), 2)
+        except (TypeError, ValueError):
+            priming_sugar_amount = None
+        priming_sugar_type = request.form.get('priming_sugar_type') or None
+
         batch = Batch(
             name=name,
             recipe_id=recipe_id,
@@ -265,6 +276,8 @@ def new_batch():
             yeast_type=request.form.get('yeast_type') or None,
             backsweetened='backsweetened' in request.form,
             pectic_used='pectic_used' in request.form,
+            priming_sugar_amount=priming_sugar_amount,
+            priming_sugar_type=priming_sugar_type,
             flavor_additions=request.form.get('flavor_additions') or None,
             notes=request.form.get('notes') or None
         )

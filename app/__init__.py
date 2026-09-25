@@ -48,13 +48,24 @@ def create_app():
             db.session.rollback()
             return {'status': 'unavailable'}, 503
 
+    @app.get('/sw.js')
+    def service_worker():
+        # Served from the root path (not /static/) so its default scope
+        # covers the whole app (/app/...), not just /static/.
+        from flask import send_from_directory
+        response = send_from_directory(
+            app.static_folder, 'sw.js', mimetype='application/javascript'
+        )
+        response.headers['Cache-Control'] = 'no-cache'
+        return response
+
     @login_manager.user_loader
     def load_user(user_id):
         return db.session.get(User, int(user_id))
 
     @app.before_request
     def require_setup():
-        allowed = {'auth_bp.setup', 'healthz', 'static'}
+        allowed = {'auth_bp.setup', 'healthz', 'service_worker', 'static'}
 
         if request.endpoint is None or request.endpoint in allowed:
             return
