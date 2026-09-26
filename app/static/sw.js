@@ -3,7 +3,7 @@
 // icon/shell immediately. Pages themselves (batches, recipes, etc.) always
 // go to the network, since they're authenticated and change often.
 
-const CACHE_NAME = 'brew-web-shell-v1';
+const CACHE_NAME = 'brew-web-shell-v2';
 const SHELL_ASSETS = [
   '/static/style.css',
   '/static/calculators.css',
