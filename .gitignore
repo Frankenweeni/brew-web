@@ -33,3 +33,5 @@ htmlcov/
 logs/*
 !logs/.gitkeep
 *.log
+
+certs/

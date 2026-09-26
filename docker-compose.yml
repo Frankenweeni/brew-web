@@ -73,5 +73,23 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  caddy:
+    build: ./caddy
+    restart: unless-stopped
+    ports:
+      - "443:443"
+    environment:
+      CF_API_TOKEN: ${CF_API_TOKEN:?Set CF_API_TOKEN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    security_opt:
+      - no-new-privileges:true
+
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:
