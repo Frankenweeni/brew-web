@@ -1,6 +1,10 @@
+import logging
+import os
+from logging.handlers import RotatingFileHandler
+
 from flask import Flask, redirect, url_for, request, render_template
-from flask_sqlalchemy import SQLAlchemy
 from flask.cli import with_appcontext
+from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager, current_user
 from flask_limiter import Limiter
@@ -8,9 +12,8 @@ from flask_limiter.util import get_remote_address
 from app.utils import check_for_updates, get_unit_preference
 from config import Config
 from markupsafe import Markup, escape
-import traceback, os, logging, click
-from logging.handlers import RotatingFileHandler
 from flask_wtf import CSRFProtect
+from sqlalchemy import text
 
 
 db = SQLAlchemy()
@@ -27,6 +30,7 @@ def create_app():
     migrate.init_app(app, db)
     login_manager.init_app(app)
     login_manager.login_view = 'auth_bp.login'
+    limiter.init_app(app)
     csrf.init_app(app)
 
     from .models import User
@@ -35,13 +39,33 @@ def create_app():
     def root():
         return redirect('/app/')
 
+    @app.get('/healthz')
+    def healthz():
+        try:
+            db.session.execute(text('SELECT 1'))
+            return {'status': 'ok'}, 200
+        except Exception:
+            db.session.rollback()
+            return {'status': 'unavailable'}, 503
+
+    @app.get('/sw.js')
+    def service_worker():
+        # Served from the root path (not /static/) so its default scope
+        # covers the whole app (/app/...), not just /static/.
+        from flask import send_from_directory
+        response = send_from_directory(
+            app.static_folder, 'sw.js', mimetype='application/javascript'
+        )
+        response.headers['Cache-Control'] = 'no-cache'
+        return response
+
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        return db.session.get(User, int(user_id))
 
     @app.before_request
     def require_setup():
-        allowed = {'auth_bp.setup', 'static'}
+        allowed = {'auth_bp.setup', 'healthz', 'service_worker', 'static'}
 
         if request.endpoint is None or request.endpoint in allowed:
             return
@@ -89,9 +113,6 @@ def create_app():
     def nl2br_filter(s):
         return Markup('<br>'.join(escape(s).splitlines()))
 
-    from .routes_calculators import calculator_bp
-    app.register_blueprint(calculator_bp)
-
     from . import routes
     app.register_blueprint(routes.routes)
 
@@ -107,26 +128,54 @@ def create_app():
     if not os.path.exists('logs'):
         os.mkdir('logs')
 
-    file_handler = RotatingFileHandler('logs/brewweb.log', maxBytes=5 * 1024 * 1024, backupCount=3)
-    file_handler.setLevel(logging.INFO)
-
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-
-    formatter = logging.Formatter(
-        '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+    log_path = os.path.abspath('logs/brewweb.log')
+    has_file_handler = any(
+        isinstance(handler, RotatingFileHandler)
+        and handler.baseFilename == log_path
+        for handler in app.logger.handlers
     )
+    if not has_file_handler:
+        file_handler = RotatingFileHandler(log_path, maxBytes=5 * 1024 * 1024, backupCount=3)
+        file_handler.setLevel(logging.INFO)
 
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
+        formatter = logging.Formatter(
+            '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
 
-    app.logger.addHandler(file_handler)
-    app.logger.addHandler(console_handler)
+        file_handler.setFormatter(formatter)
+        app.logger.addHandler(file_handler)
     app.logger.setLevel(logging.INFO)
 
-    app.logger.info('✅ Application startup')
-    app.logger.info(f'✅ Brew Web v{Config.VERSION} started')
+    app.logger.info('Application startup')
+    app.logger.info('Brew Web v%s started', Config.VERSION)
+
+    @app.after_request
+    def add_security_headers(response):
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        response.headers.setdefault(
+            'Permissions-Policy',
+            'camera=(), geolocation=(), microphone=()',
+        )
+        response.headers.setdefault(
+            'Content-Security-Policy',
+            "default-src 'self'; "
+            "base-uri 'self'; "
+            "connect-src 'self'; "
+            "font-src 'self' https://cdn.quilljs.com; "
+            "form-action 'self'; "
+            "frame-ancestors 'self'; "
+            "img-src 'self' data:; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net "
+            "https://cdn.quilljs.com; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net "
+            "https://cdn.quilljs.com",
+        )
+        if current_user.is_authenticated:
+            response.headers.setdefault('Cache-Control', 'no-store')
+        return response
 
     # --- Error Handlers ---
     def log_error_and_render(error, template, code):
@@ -150,7 +199,6 @@ def create_app():
     def internal_error(error):
         return log_error_and_render(error, "errors/500.html", 500)
 
-    from flask.cli import with_appcontext
     @app.cli.command("seed-yeasts")
     @with_appcontext
     def seed_yeasts():
@@ -183,7 +231,5 @@ def create_app():
             db.session.add(Yeast(**data, is_default=True))
         db.session.commit()
         print("✅ Yeast table seeded.")
-
-    app.cli.add_command(seed_yeasts)
 
     return app

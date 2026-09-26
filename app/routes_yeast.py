@@ -13,7 +13,7 @@ def list_yeasts():
     beer_yeasts = Yeast.query.filter_by(alcohol_type="Beer").all()
     cider_yeasts = Yeast.query.filter_by(alcohol_type="Hard Cider").all()
     other_yeasts = Yeast.query.filter(
-        ~Yeast.alcohol_type.in_(["Mead", "Wine", "Beer", "Hard Cider"]) | (Yeast.alcohol_type == None)
+        ~Yeast.alcohol_type.in_(["Mead", "Wine", "Beer", "Hard Cider"]) | Yeast.alcohol_type.is_(None)
     ).all()
     return render_template("yeasts.html", mead_yeasts=mead_yeasts, wine_yeasts=wine_yeasts,
                            beer_yeasts=beer_yeasts, cider_yeasts=cider_yeasts,
@@ -44,8 +44,12 @@ def restore_yeasts():
 
     added = 0
     for data in default_yeasts:
-        if not Yeast.query.filter_by(name=data["name"]).first():
-            db.session.add(Yeast(**data))
+        exists = Yeast.query.filter_by(
+            name=data["name"],
+            alcohol_type=data["alcohol_type"],
+        ).first()
+        if not exists:
+            db.session.add(Yeast(**data, is_default=True))
             added += 1
 
     db.session.commit()
@@ -75,7 +79,7 @@ def add_yeast():
 @login_required
 @role_required("admin")
 def delete_yeast(yeast_id):
-    yeast = Yeast.query.get_or_404(yeast_id)
+    yeast = db.get_or_404(Yeast, yeast_id)
     db.session.delete(yeast)
     db.session.commit()
     flash(f"Yeast '{yeast.name}' deleted.", "success")
@@ -85,7 +89,7 @@ def delete_yeast(yeast_id):
 @login_required
 @role_required("admin")
 def edit_yeast(yeast_id):
-    yeast = Yeast.query.get_or_404(yeast_id)
+    yeast = db.get_or_404(Yeast, yeast_id)
     if request.method == "POST":
         yeast.name = request.form.get("name")
         yeast.alcohol_type = request.form.get("alcohol_type")

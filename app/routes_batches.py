@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, request, url_for, flash
 from flask_login import login_required
 from app.decorators import role_required
 from .models import db, Batch, Recipe, Yeast
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from app.models import CalendarEvent
 from app.utils import (
     liters_to_gallons,
@@ -24,7 +24,7 @@ def list_batches():
     cider_batches = Batch.query.filter_by(alcohol_type='Hard Cider').order_by(Batch.start_date.desc()).all()
 
     other_batches = Batch.query.filter(
-        ~Batch.alcohol_type.in_(['Mead', 'Wine', 'Beer', 'Hard Cider']) | (Batch.alcohol_type == None)
+        ~Batch.alcohol_type.in_(['Mead', 'Wine', 'Beer', 'Hard Cider']) | Batch.alcohol_type.is_(None)
     ).order_by(Batch.start_date.desc()).all()
 
     return render_template(
@@ -34,13 +34,13 @@ def list_batches():
         beer_batches=beer_batches,
         cider_batches=cider_batches,
         other_batches=other_batches,
-        today=datetime.utcnow().date()
+        today=datetime.now(UTC).date()
     )
 
 @batches_bp.route('/<int:batch_id>')
 @login_required
 def view_batch(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
+    batch = db.get_or_404(Batch, batch_id)
     batch_size_liters = gallons_to_liters(batch.batch_size) if batch.batch_size else None
     fermentation_temp_c = None
     try:
@@ -61,7 +61,7 @@ def view_batch(batch_id):
 @login_required
 @role_required('admin', 'editor')
 def edit_batch(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
+    batch = db.get_or_404(Batch, batch_id)
     recipes = Recipe.query.order_by(Recipe.name).all()
     yeasts = Yeast.query.order_by(Yeast.name).all()
     selected_units = get_unit_preference()
@@ -76,11 +76,20 @@ def edit_batch(batch_id):
 
     if request.method == 'POST':
         units = get_unit_preference()
+        start_date_raw = (request.form.get('start_date') or '').strip()
+        end_date_raw = (request.form.get('end_date') or '').strip()
+        try:
+            start_date = datetime.strptime(start_date_raw, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_raw, '%Y-%m-%d') if end_date_raw else None
+        except ValueError:
+            flash('Dates must use the YYYY-MM-DD format.', 'danger')
+            return redirect(url_for('routes.batches_bp.edit_batch', batch_id=batch.id))
+
         batch.name = request.form.get('name')
         batch.recipe_id = request.form.get('recipe_id') or None
         batch.yeast_id = request.form.get('yeast_id') or None
-        batch.start_date = request.form.get('start_date') or None
-        batch.end_date = request.form.get('end_date') or None
+        batch.start_date = start_date
+        batch.end_date = end_date
         try:
             input_batch_size = float(request.form.get('batch_size'))
         except (TypeError, ValueError):
@@ -120,6 +129,11 @@ def edit_batch(batch_id):
         batch.tosna_enabled = 'enable_tosna' in request.form
         batch.backsweetened = 'backsweetened' in request.form
         batch.pectic_used = 'pectic_used' in request.form
+        try:
+            batch.priming_sugar_amount = round(float(request.form.get('priming_sugar_amount')), 2)
+        except (TypeError, ValueError):
+            batch.priming_sugar_amount = None
+        batch.priming_sugar_type = request.form.get('priming_sugar_type') or None
         batch.flavor_additions = request.form.get('flavor_additions') or None
         batch.notes = request.form.get('notes') or None
 
@@ -151,7 +165,7 @@ def edit_batch(batch_id):
 @login_required
 @role_required('admin')
 def delete_batch(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
+    batch = db.get_or_404(Batch, batch_id)
     db.session.delete(batch)
     db.session.commit()
     flash(f"Batch '{batch.name}' deleted successfully.", "success")
@@ -176,7 +190,7 @@ def new_batch():
 
         try:
             recipe_id = int(recipe_id_raw)
-            recipe = Recipe.query.get(recipe_id)
+            recipe = db.session.get(Recipe, recipe_id)
             if not recipe:
                 raise ValueError("Recipe not found.")
         except (TypeError, ValueError):
@@ -238,6 +252,12 @@ def new_batch():
             flash("Could not calculate TOSNA due to missing or invalid values.", "warning")
             tosna_enabled = False
 
+        try:
+            priming_sugar_amount = round(float(request.form.get('priming_sugar_amount')), 2)
+        except (TypeError, ValueError):
+            priming_sugar_amount = None
+        priming_sugar_type = request.form.get('priming_sugar_type') or None
+
         batch = Batch(
             name=name,
             recipe_id=recipe_id,
@@ -249,12 +269,15 @@ def new_batch():
             tosna_per_day=tosna_per_day,
             initial_gravity=initial_gravity,
             final_gravity=final_gravity,
+            abv=abv,
             batch_size=batch_size,
             fermentation_temp=fermentation_temp,
             water_type=request.form.get('water_type') or None,
             yeast_type=request.form.get('yeast_type') or None,
             backsweetened='backsweetened' in request.form,
             pectic_used='pectic_used' in request.form,
+            priming_sugar_amount=priming_sugar_amount,
+            priming_sugar_type=priming_sugar_type,
             flavor_additions=request.form.get('flavor_additions') or None,
             notes=request.form.get('notes') or None
         )
@@ -276,8 +299,9 @@ def new_batch():
 
 @batches_bp.route('/batch/<int:batch_id>/tosna', methods=['POST'])
 @login_required
+@role_required('admin', 'editor')
 def calculate_tosna(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
+    batch = db.get_or_404(Batch, batch_id)
 
     if not batch.initial_gravity or not batch.batch_size:
         flash("Missing gravity or batch size — cannot calculate TOSNA.", "warning")
@@ -294,11 +318,11 @@ def calculate_tosna(batch_id):
 
     # Add to calendar if requested
     if 'add_to_calendar' in request.form:
-        base_date = batch.start_date or datetime.utcnow().date()
+        base_date = batch.start_date.date() if batch.start_date else datetime.now(UTC).date()
         for i in range(4):
             event = CalendarEvent(
-                title=f"TOSNA Day {i}",
-                date=base_date + timedelta(days=i),
+                title=f"TOSNA Day {i + 1}",
+                start=base_date + timedelta(days=i),
                 note=f"Add {per_day}g Fermaid O for batch {batch.name}",
                 batch_id=batch.id
             )
@@ -314,16 +338,18 @@ def calculate_tosna(batch_id):
 
 @batches_bp.route('/batch/<int:batch_id>/add-tosna-calendar', methods=['POST'])
 @login_required
+@role_required('admin', 'editor')
 def add_tosna_to_calendar(batch_id):
-    batch = Batch.query.get_or_404(batch_id)
+    batch = db.get_or_404(Batch, batch_id)
     if not batch.tosna_enabled or not batch.start_date:
         flash("TOSNA schedule not available for this batch.", "warning")
         return redirect(url_for('routes.batches_bp.view_batch', batch_id=batch.id))
 
+    base_date = batch.start_date.date()
     for i in range(4):
         event = CalendarEvent(
-            title=f"TOSNA Day {i}",
-            start=batch.start_date + timedelta(days=i),  # ✅ corrected here
+            title=f"TOSNA Day {i + 1}",
+            start=base_date + timedelta(days=i),
             note=f"Add {batch.tosna_per_day}g Fermaid O to {batch.name}",
             batch_id=batch.id
         )

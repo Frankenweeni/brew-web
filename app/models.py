@@ -1,7 +1,6 @@
-from . import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import UTC, datetime
 from app import db
 
 class User(db.Model, UserMixin):
@@ -24,12 +23,16 @@ class User(db.Model, UserMixin):
         return f"<User {self.username}>"
 
 
+def utcnow_naive():
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class Recipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     alcohol_type = db.Column(db.String(20))
     content = db.Column(db.Text)
-    created_date = db.Column(db.DateTime, default=datetime.utcnow)
+    created_date = db.Column(db.DateTime, default=utcnow_naive)
     instructions = db.Column(db.Text)
     notes = db.Column(db.Text)
     water_type = db.Column(db.String(50))
@@ -59,6 +62,8 @@ class Batch(db.Model):
     backsweetened = db.Column(db.Boolean)
     flavor_additions = db.Column(db.Text)
     pectic_used = db.Column(db.Boolean)
+    priming_sugar_amount = db.Column(db.Float, comment="Priming/carbonation sugar added before bottling, in grams")
+    priming_sugar_type = db.Column(db.String(20))
     notes = db.Column(db.Text)
     water_type = db.Column(db.String(50))
     alcohol_type = db.Column(db.String(20))
@@ -111,7 +116,7 @@ class Yeast(db.Model):
 class Measurement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False)
-    date = db.Column(db.DateTime, default=datetime.utcnow)
+    date = db.Column(db.DateTime, default=utcnow_naive)
     gravity = db.Column(db.Float)
     ph = db.Column(db.Float)
     temperature = db.Column(db.Float)

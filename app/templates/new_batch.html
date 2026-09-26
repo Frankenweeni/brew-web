@@ -73,6 +73,19 @@
 
   <label><input type="checkbox" name="pectic_used" {% if request.form.get('pectic_used') %}checked{% endif %}> Pectic Enzyme Used</label><br/><br/>
 
+  <label for="priming_sugar_amount">Priming Sugar Added (g, if bottled):</label><br/>
+  <input type="number" id="priming_sugar_amount" name="priming_sugar_amount" step="0.1" min="0"
+         value="{{ request.form.get('priming_sugar_amount', '') }}"
+         placeholder="Use the Carbonation calculator to work this out"><br/><br/>
+
+  <label for="priming_sugar_type">Priming Sugar Type:</label><br/>
+  <select id="priming_sugar_type" name="priming_sugar_type">
+    <option value="">-- Select --</option>
+    {% for st in ['Corn Sugar (Dextrose)', 'Table Sugar (Sucrose)', 'DME', 'Honey', 'Other'] %}
+      <option value="{{ st }}" {% if request.form.get('priming_sugar_type') == st %}selected{% endif %}>{{ st }}</option>
+    {% endfor %}
+  </select><br/><br/>
+
   <label for="flavor_additions">Flavor Additions:</label><br/>
   <textarea id="flavor_additions" name="flavor_additions" rows="3" cols="50">{{ request.form.get('flavor_additions', '') }}</textarea><br/><br/>
 

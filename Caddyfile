@@ -1,0 +1,6 @@
+brew.kortenhoeven.net {
+	tls {
+		dns cloudflare {env.CF_API_TOKEN}
+	}
+	reverse_proxy web:4452
+}

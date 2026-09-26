@@ -200,6 +200,12 @@ input, select, textarea {
   border: 1px solid #555;
 }
 
+textarea {
+  width: 100%;
+  max-width: 500px;
+  box-sizing: border-box;
+}
+
 button, input[type="submit"] {
   font-family: inherit;
   font-size: 1em;
@@ -290,4 +296,27 @@ body.light-mode input[type="submit"]:hover {
     content: none;
     margin-bottom: 0;
   }
+}
+
+/* --- Full-width, mobile-friendly form fields (inputs/selects match textarea) --- */
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]),
+select {
+  width: 100%;
+  max-width: 500px;
+  box-sizing: border-box;
+  display: block;
+}
+
+form input[type="checkbox"],
+form input[type="radio"] {
+  width: auto;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+form label:has(input[type="checkbox"]),
+form label:has(input[type="radio"]) {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 0;
 }
