@@ -2,6 +2,85 @@
 
 ## [Unreleased]
 
+## [v1.4.3] - 2026-10-22
+
+### Security maintenance
+
+- Refresh the pinned Python 3.13 Bookworm image to the verified 3.13.17 security
+  release; pin certifi 2026.10.19 and verify pip's bundled CA update. CI uses the
+  PSF-recommended hash-pinned pip 26.2.2 wheel before dependency downloads.
+- Update psycopg2-binary 2.9.12 to 2.9.13 for parser fixes. Compile the Linux
+  container driver against Debian's maintained libpq/OpenSSL instead of private
+  wheel libraries; remove the build compiler from the final image. No PostgreSQL
+  server or schema change.
+- Update SHA-pinned docker/build-push-action to 7.4.0, including its fix for
+  workflow-command injection when printing build metadata.
+- Review all six open Dependabot version PRs separately from security alerts;
+  do not describe routine lint/browser/CodeQL updates as vulnerability fixes.
+- Verify actual runtime/CA/native-library versions on GitHub and upgrade from
+  both published v1.4.0 and v1.4.2 images, retaining data and repeated-startup checks.
+
+### Security assessment
+
+- Assess PHP CVE-2026-109618/CVE-2026-109619 against the stock v1.4.2 image and
+  shared PostgreSQL/export image, with GitHub-only runtime inventory and a
+  controlled detector test. No PHP patch, image replacement or data migration is
+  implied: the stock application does not use PHP.
+- Add PHP absence checks to candidate CI and future post-publish verification;
+  publish the scoped findings and host/custom-image limitations.
+
+## [v1.4.2] - 2026-10-11
+
+### Release recovery
+
+- Move the anonymous verification Docker configuration path to step-level
+  environment variables, where GitHub supports the runner context.
+- Add checksum-pinned actionlint 1.7.12 validation of every GitHub workflow to
+  ordinary and tag-triggered CI, before publishing credentials are available.
+- Publish the compatibility/reliability work below under a new version; retain
+  the immutable v1.4.1 source tag. Its workflow was rejected before any jobs ran,
+  so no v1.4.1 image or release page was published.
+
+## [v1.4.1] - Unpublished source tag, 2026-10-11
+
+### Fixed
+
+- Validate recognized v1.3.1/v1.4 schemas before replacing old generated Alembic
+  metadata, add missing batch size, retain historical values and advance serial
+  sequences safely. Unknown layouts stop startup instead of being stamped as head.
+- Restore trusted SQL/COPY/custom-format pg_dump backups in one transaction,
+  validate schema/admin before commit, roll back on failure, coordinate restores
+  with a database lock and avoid overwriting existing backup files on upload.
+- Preserve remaining ingredients when first/middle rows are removed; reject
+  invalid rows before replacing the original recipe/ingredients.
+- Sanitize stored recipe HTML and JSON-encode editor initialization; restore
+  recipe-delete CSRF protection and role-aware controls.
+- Show cider and historical categories, support the viewer role label and apply
+  font-size preferences. Preserve ingredient numerator units when changing rates.
+- Correct gravity-point dilution, honey/sweetness/recovery estimates, hydrometer
+  density correction and temperature-dependent corn-sugar estimates; document
+  formula assumptions and the simplified legacy nutrient schedule.
+- Cache offline update failures and notify only for newer published releases.
+
+### Changed
+
+- Bundle pinned Quill 2.0.3, Chart.js 4.5.1 and FullCalendar 6.1.20 with licenses;
+  no runtime CDN dependency. Save semantic recipe HTML to retain list formatting.
+- Add a required-existing-volume upgrade override, bounded database connection
+  wait and Docker log rotation without changing PostgreSQL major or worker count.
+- Gate image publishing on the full reusable GitHub CI workflow, verify version
+  tags and document changed instructions alongside their regression tests.
+
+### Verification
+
+- Added GitHub-only PostgreSQL upgrade/restore, published-image upgrade, explicit
+  volume reuse and offline browser checks. No local Docker Desktop is required.
+- The 09:00 Eastern publication attempt failed workflow validation before any
+  jobs started. Main CI/CodeQL passed, but that did not validate the release
+  workflow. Version 1.4.2 carries the repair and the same application changes.
+
+### Previously integrated maintenance
+
 ### Added
 
 - CI across Python 3.11 and 3.13, dependency auditing, CodeQL analysis, and GHCR publishing.
@@ -18,9 +97,19 @@
 - Parameterized all PostgreSQL commands and replaced dynamic startup migrations with reviewed,
   committed migrations.
 - Reworked installation, upgrade, backup, security, and development documentation.
+- Clarified the project's best-effort maintenance model and recommended operational
+  practices for stable installations, issue reports, and contributions.
 
 ### Fixed
 
+- Corrected metric recipe ingredient-rate conversion so create, edit, and detail views
+  round-trip without applying the gallon/liter factor twice.
+- Corrected metric unit labels on batch and measurement forms and centralized volume and
+  temperature conversions used by batch TOSNA and calculator paths.
+- Repaired the hydrometer temperature-correction form and made its sample and calibration
+  temperatures honor the selected unit system.
+- Added container-upgrade regression coverage that verifies representative legacy user data
+  and relationships survive compatibility repair, migration, and a second startup.
 - Protected password recovery and import status endpoints from unauthenticated access.
 - Restored the CSRF token in the recovery form and enabled login rate limiting.
 - Fixed metric recipe conversion and persisted calculated ABV for new batches.

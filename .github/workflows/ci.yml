@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  workflow_call:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
@@ -14,6 +16,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  workflow-lint:
+    name: GitHub workflow validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate every GitHub workflow with pinned actionlint
+        run: |
+          tool_dir="$(mktemp -d)"
+          trap 'rm -f "$tool_dir/actionlint.tar.gz" "$tool_dir/actionlint"; rmdir "$tool_dir"' EXIT
+          curl --fail --show-error --location --retry 3 \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
+            --output "$tool_dir/actionlint.tar.gz"
+          printf '%s  %s\n' \
+            '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8' \
+            "$tool_dir/actionlint.tar.gz" | sha256sum --check
+          tar --extract --gzip --file "$tool_dir/actionlint.tar.gz" --directory "$tool_dir" actionlint
+          "$tool_dir/actionlint" -shellcheck= -pyflakes=
+
   test:
     name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
@@ -30,7 +51,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Install dependencies
-        run: python -m pip install --requirement requirements-dev.txt
+        run: |
+          sh tests/security/upgrade_ci_pip.sh
+          python -m pip install --requirement requirements-dev.txt
       - name: Lint
         run: ruff check .
       - name: Test
@@ -50,5 +73,59 @@ jobs:
           SECRET_KEY: validation-only
           POSTGRES_PASSWORD: validation-only
         run: docker compose config --quiet
+      - name: Verify an existing volume is selected without creating a replacement
+        run: sh tests/upgrade/verify_compose_volume.sh
       - name: Build image
         run: docker build --tag brewweb:ci .
+      - name: Verify the candidate remains PHP-free and the detector fails closed
+        run: |
+          sh tests/security/verify_no_php.sh --self-test brewweb:ci
+          sh tests/security/verify_no_php.sh brewweb:ci
+      - name: Verify runtime security versions and certificate trust packages
+        run: |
+          docker run --rm --interactive --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges:true --entrypoint python brewweb:ci \
+            -B - < tests/security/runtime_versions.py
+      - name: Verify legacy database upgrade preserves data
+        run: |
+          sh tests/upgrade/verify_container_upgrade.sh brewweb:ci
+          sh tests/upgrade/verify_container_upgrade.sh brewweb:ci \
+            ghcr.io/anndrox/brew-web@sha256:6eaa72ba9897450023fe8394a88203d962a49611111e49c64348d208907cbe51
+
+  postgres:
+    name: PostgreSQL restore and compatibility
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.13-slim-bookworm@sha256:e32be0e55814a08977501ca863271d9bd02443710db8f2afaf8372e2c4508530
+    services:
+      postgres:
+        image: postgres:15-alpine@sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b
+        env:
+          POSTGRES_USER: brewtest
+          POSTGRES_PASSWORD: runner-test-only
+          POSTGRES_DB: brewtest
+        options: >-
+          --health-cmd "pg_isready -U brewtest -d brewtest"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install dependencies and PostgreSQL client
+        run: |
+          sh tests/security/upgrade_ci_pip.sh
+          apt-get update
+          apt-get install --yes --no-install-recommends postgresql-client gcc libc6-dev libpq-dev
+          python -m pip install --no-binary=psycopg2-binary --requirement requirements-dev.txt
+      - name: Verify legacy upgrades and atomic restores in isolated databases
+        env:
+          BREWWEB_TEST_POSTGRES: postgresql+psycopg2://brewtest:runner-test-only@postgres:5432/brewtest
+        run: python -m pytest tests/test_postgres.py -v
+      - name: Install runner-only browser test dependencies
+        run: |
+          python -m pip install --requirement tests/requirements-browser.txt
+          python -m playwright install --with-deps chromium
+      - name: Verify site functionality with remote browser dependencies blocked
+        env:
+          SECRET_KEY: browser-runner-test-only
+          DATABASE_URL: postgresql+psycopg2://brewtest:runner-test-only@postgres:5432/brewtest
+        run: python tests/browser_smoke.py

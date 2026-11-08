@@ -32,9 +32,9 @@
 <h2>🍎 Hard Cider Recipes</h2>
 <ul>
   {% for recipe in cider_recipes %}
-<li><a href="{{ url_for("routes.recipes_bp.view_recipe", recipe_id=recipe.id) }}">{{ recipe.name }}</a></li>
+    <li><a href="{{ url_for('routes.recipes_bp.view_recipe', recipe_id=recipe.id) }}">{{ recipe.name }}</a></li>
   {% else %}
-<li>No cider recipes yet.</li>
+    <li>No cider recipes yet.</li>
   {% endfor %}
 </ul>
 

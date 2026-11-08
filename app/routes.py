@@ -23,7 +23,10 @@ def index():
     wine_recipes = Recipe.query.filter_by(alcohol_type='Wine').order_by(Recipe.name.asc()).all()
     beer_recipes = Recipe.query.filter_by(alcohol_type='Beer').order_by(Recipe.name.asc()).all()
     cider_recipes = Recipe.query.filter_by(alcohol_type='Hard Cider').order_by(Recipe.name.asc()).all()
-    other_recipes = Recipe.query.filter(~Recipe.alcohol_type.in_(["Mead", "Wine", "Beer", "Hard Cider"]) | (Recipe.alcohol_type == None)).order_by(Recipe.name.asc()).all()
+    other_recipes = Recipe.query.filter(
+        db.or_(Recipe.alcohol_type.is_(None),
+               Recipe.alcohol_type.notin_(['Mead', 'Wine', 'Beer', 'Hard Cider']))
+    ).order_by(Recipe.name.asc()).all()
     return render_template(
         'index.html',
         mead_recipes=mead_recipes,
@@ -67,7 +70,12 @@ def new_measurement():
             traceback.print_exc()
             raise
 
-    return render_template('new_measurement.html', batches=batches, selected_id=selected_id)
+    return render_template(
+        'new_measurement.html',
+        batches=batches,
+        selected_id=selected_id,
+        unit_preference=units,
+    )
 
 @routes.route('/measurements/<int:measurement_id>/delete', methods=['POST'])
 @login_required
