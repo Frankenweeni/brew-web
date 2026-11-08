@@ -3,7 +3,7 @@
 {% block content %}
 <div style="flex: 1;">
   <h2>Brew Monk Hydrometer</h2>
-  <p>Every 15 minutes Brew Web copies the latest reading from myBrewMonk into the batch you pick below. Each day gets one measurement, updated with the newest reading.</p>
+  <p>Brew Web reads your Brew Monk Wi-Fi hydrometer from myBrewMonk every 15 minutes. Link it to a batch on that batch's page, in the Brew Monk Hydrometer card.</p>
 
   <form method="POST" autocomplete="off">
     <input name="csrf_token" type="hidden" value="{{ csrf_token() }}"/>
@@ -17,16 +17,6 @@
       <label class="form-label" for="password">myBrewMonk password</label>
       <input class="form-control" type="password" id="password" name="password" autocomplete="new-password"
              placeholder="{{ 'Saved, leave empty to keep it' if s.brewmonk_password else '' }}">
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label" for="batch_id">Hydrometer is in batch</label>
-      <select class="form-control" id="batch_id" name="batch_id">
-        <option value="">Not in a batch (don't log)</option>
-        {% for b in batches %}
-          <option value="{{ b.id }}" {% if s.brewmonk_batch_id == b.id %}selected{% endif %}>{{ b.name }}</option>
-        {% endfor %}
-      </select>
     </div>
 
     <button class="btn btn-primary" type="submit" name="action" value="save">Save</button>

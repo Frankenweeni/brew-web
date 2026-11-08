@@ -27,8 +27,11 @@ def index():
         db.or_(Recipe.alcohol_type.is_(None),
                Recipe.alcohol_type.notin_(['Mead', 'Wine', 'Beer', 'Hard Cider']))
     ).order_by(Recipe.name.asc()).all()
+    from app import home
     return render_template(
         'index.html',
+        status=home.status(),
+        unit_preference=get_unit_preference(),
         mead_recipes=mead_recipes,
         wine_recipes=wine_recipes,
         beer_recipes=beer_recipes,

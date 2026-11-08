@@ -130,6 +130,7 @@ class AppSettings(db.Model):
     brewmonk_password = db.Column(db.String(255))
     brewmonk_batch_id = db.Column(db.Integer)
     brewmonk_last_sync = db.Column(db.DateTime)
+    brewmonk_linked_at = db.Column(db.DateTime)
     brewmonk_last_status = db.Column(db.String(255))
 
 

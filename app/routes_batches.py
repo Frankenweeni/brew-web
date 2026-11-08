@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, request, url_for, flash
 from flask_login import login_required
 from app.decorators import role_required
+from app import brewmonk
 from .models import db, Batch, Recipe, Yeast
 from datetime import UTC, datetime, timedelta
 from app.models import CalendarEvent
@@ -18,23 +19,23 @@ batches_bp = Blueprint('batches_bp', __name__, url_prefix='/batches')
 @batches_bp.route('/')
 @login_required
 def list_batches():
-    mead_batches = Batch.query.filter_by(alcohol_type='Mead').order_by(Batch.start_date.desc()).all()
-    wine_batches = Batch.query.filter_by(alcohol_type='Wine').order_by(Batch.start_date.desc()).all()
-    beer_batches = Batch.query.filter_by(alcohol_type='Beer').order_by(Batch.start_date.desc()).all()
-    cider_batches = Batch.query.filter_by(alcohol_type='Hard Cider').order_by(Batch.start_date.desc()).all()
+    from app.home import is_in_progress
 
-    other_batches = Batch.query.filter(
-        ~Batch.alcohol_type.in_(['Mead', 'Wine', 'Beer', 'Hard Cider']) | Batch.alcohol_type.is_(None)
-    ).order_by(Batch.start_date.desc()).all()
+    today = datetime.now().date()
+    batches = Batch.query.order_by(Batch.start_date.desc()).all()
+    in_progress = [b for b in batches if is_in_progress(b, today)]
+    done = [b for b in batches if not is_in_progress(b, today)]
+    main_types = ['Mead', 'Wine', 'Beer', 'Hard Cider']
 
     return render_template(
         'batches.html',
-        mead_batches=mead_batches,
-        wine_batches=wine_batches,
-        beer_batches=beer_batches,
-        cider_batches=cider_batches,
-        other_batches=other_batches,
-        today=datetime.now(UTC).date()
+        in_progress_batches=in_progress,
+        mead_batches=[b for b in done if b.alcohol_type == 'Mead'],
+        wine_batches=[b for b in done if b.alcohol_type == 'Wine'],
+        beer_batches=[b for b in done if b.alcohol_type == 'Beer'],
+        cider_batches=[b for b in done if b.alcohol_type == 'Hard Cider'],
+        other_batches=[b for b in done if b.alcohol_type not in main_types],
+        today=today,
     )
 
 @batches_bp.route('/<int:batch_id>')
@@ -55,7 +56,28 @@ def view_batch(batch_id):
         batch_size_liters=batch_size_liters,
         fermentation_temp_c=fermentation_temp_c,
         unit_preference=get_unit_preference(),
+        bm=brewmonk.card(batch),
     )
+
+@batches_bp.route('/<int:batch_id>/brewmonk', methods=['POST'])
+@login_required
+@role_required('admin', 'editor')
+def link_brewmonk(batch_id):
+    batch = db.get_or_404(Batch, batch_id)
+    settings = brewmonk.get_settings()
+    if request.form.get('linked') == 'yes':
+        if batch.end_date:
+            flash('This batch is finished, so the hydrometer can\'t be linked to it.', 'danger')
+        elif settings.brewmonk_batch_id != batch.id:
+            settings.brewmonk_batch_id = batch.id
+            settings.brewmonk_linked_at = datetime.now()
+            db.session.commit()
+            flash(f'Hydrometer linked to {batch.name}. ' + brewmonk.sync(), 'success')
+    elif settings.brewmonk_batch_id == batch.id:
+        brewmonk.unlink(settings)
+        db.session.commit()
+        flash('Hydrometer unlinked from this batch.', 'success')
+    return redirect(url_for('routes.batches_bp.view_batch', batch_id=batch.id))
 
 @batches_bp.route('/<int:batch_id>/edit', methods=['GET', 'POST'])
 @login_required

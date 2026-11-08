@@ -1,0 +1,99 @@
+{# Brew Monk hydrometer card. Same place and same tiles on every batch; values show "—" when there is no data. #}
+{% set bms = bm.stats %}
+{% set metric = unit_preference == 'metric' %}
+{% set can_edit = current_user.role in ['admin', 'editor'] %}
+{% set locked = batch.end_date or not bm.configured %}
+<section class="bm-card">
+  <h2 class="bm-title">🍺 Brew Monk Hydrometer</h2>
+
+  <p class="bm-status"><strong>Status:</strong>
+    {% if bm.linked %}In this batch since {{ bm.linked_at.strftime('%Y-%m-%d %H:%M') if bm.linked_at else '—' }}
+    {% elif bm.elsewhere %}In {{ bm.elsewhere }}
+    {% else %}Not in a batch{% endif %}
+    · <strong>Last reading:</strong> {{ bms.time.strftime('%Y-%m-%d %H:%M') if bms.time else '—' }}
+  </p>
+
+  {% if can_edit %}
+  <form method="POST" action="{{ url_for('routes.batches_bp.link_brewmonk', batch_id=batch.id) }}" class="bm-link">
+    <input name="csrf_token" type="hidden" value="{{ csrf_token() }}"/>
+    <label for="bm_linked">Hydrometer in this batch</label>
+    <select id="bm_linked" name="linked" {% if locked %}disabled{% endif %}>
+      <option value="no" {% if not bm.linked %}selected{% endif %}>No</option>
+      <option value="yes" {% if bm.linked %}selected{% endif %}>Yes</option>
+    </select>
+    <button type="submit" class="button-link" {% if locked %}disabled{% endif %}>Save</button>
+  </form>
+  <p class="bm-note">
+    {% if not bm.configured %}Add your myBrewMonk login under Settings → Brew Monk Hydrometer first.
+    {% elif batch.end_date %}This batch is finished, so the hydrometer can't be linked to it.
+    {% elif bm.elsewhere and not bm.linked %}Choosing Yes moves the hydrometer here from {{ bm.elsewhere }}.
+    {% else %}New readings show up within 15 minutes.{% endif %}
+  </p>
+  {% endif %}
+
+  <div class="bm-tiles">
+    <div class="bm-tile"><div class="bm-label">Gravity</div>
+      <div class="bm-value">{{ '%.3f'|format(bms.sg) if bms.sg is not none else '—' }}</div></div>
+    <div class="bm-tile"><div class="bm-label">Temperature</div>
+      <div class="bm-value">
+        {% if bms.temp_c is none %}—{% elif metric %}{{ '%.1f'|format(bms.temp_c) }} °C{% else %}{{ '%.1f'|format(bms.temp_c * 9 / 5 + 32) }} °F{% endif %}
+      </div></div>
+    <div class="bm-tile"><div class="bm-label">Estimated ABV</div>
+      <div class="bm-value">{{ '%.1f %%'|format(bms.abv) if bms.abv is not none else '—' }}</div></div>
+    <div class="bm-tile"><div class="bm-label">Attenuation</div>
+      <div class="bm-value">{{ '%.0f %%'|format(bms.attenuation) if bms.attenuation is not none else '—' }}</div></div>
+    <div class="bm-tile"><div class="bm-label">Change last 24 hours</div>
+      <div class="bm-value">{{ '%+.1f points/day'|format(bms.change_24h) if bms.change_24h is not none else '—' }}</div></div>
+    <div class="bm-tile"><div class="bm-label">Battery</div>
+      <div class="bm-value">{% if bms.battery is none %}—{% else %}{{ '%.2f V'|format(bms.battery) }}{% if bms.battery_low %} (low, charge it){% endif %}{% endif %}</div></div>
+  </div>
+
+  <div class="bm-chart">
+    <canvas id="bmChart" aria-label="Hydrometer gravity and temperature chart"></canvas>
+    <p id="bmChartEmpty" class="bm-empty">No hydrometer readings for this batch yet.</p>
+  </div>
+</section>
+
+<script src="{{ url_for('static', filename='vendor/chartjs-4.5.1/chart.umd.min.js') }}"></script>
+<script>
+(function () {
+  const data = {{ bm.chart|tojson }};
+  const metric = {{ 'true' if metric else 'false' }};
+  if (!data.readings.length && !data.manual.length) return;
+  document.getElementById('bmChartEmpty').style.display = 'none';
+
+  const light = document.body.classList.contains('light-mode');
+  const text = light ? '#333' : '#ddd';
+  const grid = light ? '#ddd' : '#333';
+  const toTemp = c => c == null ? null : (metric ? c : c * 9 / 5 + 32);
+  const fmtTime = ms => new Date(ms).toLocaleString('en-GB', {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'});
+
+  new Chart(document.getElementById('bmChart'), {
+    type: 'line',
+    data: {datasets: [
+      {label: 'Gravity', data: data.readings.map(r => ({x: r.x, y: r.sg})), yAxisID: 'sg',
+       borderColor: '#e5534b', backgroundColor: '#e5534b', pointRadius: 0, borderWidth: 2},
+      {label: metric ? 'Temperature (°C)' : 'Temperature (°F)', data: data.readings.map(r => ({x: r.x, y: toTemp(r.c)})),
+       yAxisID: 'temp', borderColor: '#4ea1ff', backgroundColor: '#4ea1ff', pointRadius: 0, borderWidth: 2},
+      {label: 'Manual gravity', type: 'scatter', data: data.manual.map(m => ({x: m.x, y: m.sg})), yAxisID: 'sg',
+       borderColor: '#f0b429', backgroundColor: '#f0b429', pointRadius: 5, pointStyle: 'rectRot'}
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false, parsing: true,
+      interaction: {mode: 'nearest', intersect: false},
+      plugins: {
+        legend: {labels: {color: text}},
+        tooltip: {callbacks: {
+          title: items => fmtTime(items[0].parsed.x),
+          label: i => i.dataset.yAxisID === 'sg' ? `${i.dataset.label}: ${i.parsed.y.toFixed(3)}` : `${i.dataset.label}: ${i.parsed.y.toFixed(1)}`
+        }}
+      },
+      scales: {
+        x: {type: 'linear', ticks: {color: text, maxTicksLimit: 6, callback: v => fmtTime(v)}, grid: {color: grid}},
+        sg: {position: 'left', ticks: {color: '#e5534b', callback: v => Number(v).toFixed(3)}, grid: {color: grid}},
+        temp: {position: 'right', ticks: {color: '#4ea1ff'}, grid: {drawOnChartArea: false}}
+      }
+    }
+  });
+})();
+</script>

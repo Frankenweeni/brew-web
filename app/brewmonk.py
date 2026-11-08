@@ -4,9 +4,12 @@ myBrewMonk has no public API, so this logs in to the website with the
 credentials saved under Settings > Brew Monk Hydrometer and reads the same
 CSV file the website uses to draw its fermentation chart.
 
-Each batch gets one measurement per day from the hydrometer. During the day
-that row is updated with the latest reading, so the measurements list stays
-readable while still showing the gravity curve day by day.
+The hydrometer is linked to a batch from the batch page. While linked:
+- every reading since the link is kept for that batch's chart
+  (instance/brewmonk/batch_<id>.json), and
+- the batch gets one measurement per day, updated with the latest reading,
+  so the measurements list stays readable.
+Finishing the batch (setting an end date) unlinks the hydrometer.
 """
 import base64
 import csv
@@ -14,9 +17,11 @@ import hashlib
 import io
 import json
 import logging
+import os
 import re
+import tempfile
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import requests
 from cryptography.fernet import Fernet, InvalidToken
@@ -28,9 +33,12 @@ from .utils import c_to_f
 BASE_URL = "https://mybrewmonk.eu"
 TIMEOUT = 20
 NOTE = "Brew Monk hydrometer (auto)"
+DATA_DIR = os.path.join("instance", "brewmonk")
+LOW_BATTERY_V = 3.4  # myBrewMonk shows its battery warning at or below this
 # Outside this range the hydrometer is not floating in wort/must/cider
-# (for example lying on a desk), so the reading is not logged.
+# (for example lying on a desk), so the reading is ignored.
 SG_MIN, SG_MAX = 0.980, 1.200
+MAX_CHART_POINTS = 1500
 
 log = logging.getLogger(__name__)
 
@@ -100,36 +108,76 @@ def login(username, password):
     return session
 
 
-def latest_reading(session):
-    """Latest reading from the active myBrewMonk fermentation, or None."""
+def fetch_readings(session):
+    """All readings of the active myBrewMonk fermentation, oldest first."""
     page = session.get(f"{BASE_URL}/fermentation", timeout=TIMEOUT)
     page.raise_for_status()
     urls = re.findall(r'load_data\("(/fermentation/\d+/data)"', page.text)
     if not urls:
-        return None
+        return []
 
     resp = session.get(f"{BASE_URL}{urls[0]}", timeout=TIMEOUT)
     resp.raise_for_status()
     rows = list(csv.reader(io.StringIO(resp.text)))
     if len(rows) < 2:
-        return None
+        return []
 
     names = ["created"] + [json.loads(col).get("name") for col in rows[0][1:]]
-    last = dict(zip(names, rows[-1]))
+    readings = []
+    for row in rows[1:]:
+        values = dict(zip(names, row))
 
-    def number(key):
+        def number(key):
+            try:
+                return float(values.get(key))
+            except (TypeError, ValueError):
+                return None
+
         try:
-            return float(last.get(key))
-        except (TypeError, ValueError):
-            return None
+            created = datetime.fromisoformat(values["created"]).astimezone().replace(tzinfo=None)
+        except (KeyError, ValueError):
+            continue
+        readings.append({
+            "time": created,
+            "sg": number("SG"),
+            "temp_c": number("Temperature"),
+            "battery": number("Battery Voltage"),
+        })
+    readings.sort(key=lambda r: r["time"])
+    return readings
 
-    created = datetime.fromisoformat(last["created"]).astimezone().replace(tzinfo=None)
-    return {
-        "time": created,
-        "sg": number("SG"),
-        "temp_c": number("Temperature"),
-        "battery": number("Battery Voltage"),
-    }
+
+def is_floating(reading):
+    return reading["sg"] is not None and SG_MIN <= reading["sg"] <= SG_MAX
+
+
+# --- Per-batch reading history ------------------------------------------------
+
+def _batch_file(batch_id):
+    return os.path.join(DATA_DIR, f"batch_{batch_id}.json")
+
+
+def load_batch_readings(batch_id):
+    try:
+        with open(_batch_file(batch_id), encoding="utf-8") as fh:
+            raw = json.load(fh)
+    except (FileNotFoundError, ValueError):
+        return []
+    return [{"time": datetime.fromisoformat(r["t"]), "sg": r.get("sg"),
+             "temp_c": r.get("c"), "battery": r.get("v")} for r in raw]
+
+
+def _store_batch_readings(batch_id, new_readings):
+    merged = {r["time"]: r for r in load_batch_readings(batch_id)}
+    for r in new_readings:
+        merged[r["time"]] = r
+    raw = [{"t": r["time"].isoformat(), "sg": r["sg"], "c": r["temp_c"], "v": r["battery"]}
+           for r in sorted(merged.values(), key=lambda r: r["time"])]
+    os.makedirs(DATA_DIR, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=DATA_DIR, suffix=".tmp")
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        json.dump(raw, fh)
+    os.replace(tmp, _batch_file(batch_id))
 
 
 # --- Sync -------------------------------------------------------------------
@@ -162,27 +210,37 @@ def _save_measurement(batch_id, reading):
     row.temperature = round(c_to_f(reading["temp_c"]), 1) if reading["temp_c"] is not None else None
 
 
+def unlink(settings):
+    settings.brewmonk_batch_id = None
+    settings.brewmonk_linked_at = None
+
+
 def sync():
-    """Fetch the latest reading and log it to the selected batch. Returns a status text."""
+    """Fetch readings and log them to the linked batch. Returns a status text."""
     settings = get_settings()
     try:
         session = login(settings.brewmonk_username, decrypt_password(settings.brewmonk_password))
-        reading = latest_reading(session)
-        if reading is None:
+        readings = fetch_readings(session)
+        if not readings:
             status = "No active fermentation with readings on myBrewMonk"
         else:
-            status = _describe(reading)
-            sg = reading["sg"]
+            latest = readings[-1]
+            status = _describe(latest)
             batch = db.session.get(Batch, settings.brewmonk_batch_id) if settings.brewmonk_batch_id else None
             if batch is None:
-                status += " (not logged: no batch selected)"
+                status += " (not logged: not linked to a batch)"
             elif batch.end_date:
-                status += " (not logged: batch is finished)"
-            elif sg is None or not SG_MIN <= sg <= SG_MAX:
-                status += " (not logged: hydrometer doesn't seem to be floating)"
+                unlink(settings)
+                status += f" (not logged: {batch.name} is finished, hydrometer unlinked)"
             else:
-                _save_measurement(settings.brewmonk_batch_id, reading)
-                status += " (logged)"
+                since = settings.brewmonk_linked_at or datetime.min
+                usable = [r for r in readings if r["time"] >= since and is_floating(r)]
+                _store_batch_readings(batch.id, usable)
+                if usable and usable[-1] is latest:
+                    _save_measurement(batch.id, latest)
+                    status += f" (logged to {batch.name})"
+                else:
+                    status += " (not logged: hydrometer doesn't seem to be floating)"
     except BrewMonkError as e:
         status = str(e)
     except requests.RequestException:
@@ -205,3 +263,55 @@ def sync_forever(interval_seconds=900):
         finally:
             db.session.remove()
         time.sleep(interval_seconds)
+
+
+# --- Batch page card ----------------------------------------------------------
+
+def card(batch):
+    """Everything the batch page's hydrometer card shows."""
+    settings = get_settings()
+    linked = settings.brewmonk_batch_id == batch.id
+    elsewhere = None
+    if settings.brewmonk_batch_id and not linked:
+        other = db.session.get(Batch, settings.brewmonk_batch_id)
+        elsewhere = other.name if other else None
+
+    readings = load_batch_readings(batch.id)
+    latest = readings[-1] if readings else None
+    og = batch.initial_gravity or (readings[0]["sg"] if readings else None)
+
+    stats = {"sg": None, "temp_c": None, "battery": None, "battery_low": False,
+             "time": None, "abv": None, "attenuation": None, "change_24h": None}
+    if latest:
+        sg = latest["sg"]
+        stats.update(sg=sg, temp_c=latest["temp_c"], battery=latest["battery"], time=latest["time"])
+        stats["battery_low"] = latest["battery"] is not None and latest["battery"] <= LOW_BATTERY_V
+        if og and sg is not None:
+            stats["abv"] = max(0.0, (og - sg) * 131.25)
+            if og > 1:
+                stats["attenuation"] = max(0.0, (og - sg) / (og - 1) * 100)
+        # Gravity change per day, from the reading closest to 24 hours earlier
+        older = [r for r in readings if r["time"] <= latest["time"] - timedelta(hours=20)]
+        if older and sg is not None:
+            ref = min(older, key=lambda r: abs((latest["time"] - r["time"]) - timedelta(hours=24)))
+            days = (latest["time"] - ref["time"]).total_seconds() / 86400
+            if days > 0 and ref["sg"] is not None:
+                stats["change_24h"] = (sg - ref["sg"]) * 1000 / days
+
+    step = max(1, len(readings) // MAX_CHART_POINTS)
+    chart = {
+        "readings": [{"x": int(r["time"].timestamp() * 1000), "sg": r["sg"], "c": r["temp_c"]}
+                     for r in readings[::step]],
+        "manual": [{"x": int(m.date.timestamp() * 1000), "sg": m.gravity}
+                   for m in batch.measurements
+                   if m.notes != NOTE and m.gravity is not None and m.date is not None],
+    }
+
+    return {
+        "configured": bool(settings.brewmonk_username and settings.brewmonk_password),
+        "linked": linked,
+        "linked_at": settings.brewmonk_linked_at if linked else None,
+        "elsewhere": elsewhere,
+        "stats": stats,
+        "chart": chart,
+    }

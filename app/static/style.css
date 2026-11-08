@@ -350,3 +350,35 @@ body.light-mode a.button-link:hover {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+
+/* Brew Monk hydrometer card on the batch page */
+.bm-card { border: 1px solid #444; border-radius: 8px; padding: 16px; margin: 1em 0 2em; }
+.bm-title { margin-top: 0; }
+.bm-status, .bm-note { margin: 0 0 8px; }
+.bm-note { font-size: 0.9em; color: #aaa; }
+.bm-link { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
+.bm-link select { width: auto; }
+.bm-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 14px 0; }
+.bm-tile { background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 10px; }
+.bm-label { font-size: 0.85em; color: #aaa; }
+.bm-value { font-size: 1.25em; font-weight: 600; overflow-wrap: anywhere; }
+.bm-chart { position: relative; height: 300px; }
+.bm-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; color: #aaa; }
+body.light-mode .bm-card { border-color: #ccc; }
+body.light-mode .bm-tile { background: #f4f4f4; border-color: #ddd; }
+body.light-mode .bm-label, body.light-mode .bm-note, body.light-mode .bm-empty { color: #555; }
+
+/* Home page "Brewing now" overview */
+.home-now h2 { margin-top: 1.4em; }
+.home-meta { color: #aaa; font-size: 0.9em; margin: 0 0 8px; }
+.home-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.home-card { display: block; border: 1px solid #444; border-radius: 8px; padding: 14px; color: inherit; text-decoration: none; }
+.home-card:hover { border-color: #888; }
+.home-card h3 { margin: 0 0 4px; overflow-wrap: anywhere; }
+.home-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 8px 0 0; }
+.home-facts dt { color: #aaa; }
+.home-facts dd { margin: 0; overflow-wrap: anywhere; }
+.home-list { padding-left: 1.2em; }
+body.light-mode .home-meta, body.light-mode .home-facts dt { color: #555; }
+body.light-mode .home-card { border-color: #ccc; }

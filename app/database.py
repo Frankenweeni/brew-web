@@ -74,6 +74,10 @@ def prepare_schema(connection):
             raise ValueError('Multiple migration heads require manual review.')
         revision = revisions[0] if revisions else None
     known = {rev.revision for rev in ScriptDirectory(str(ROOT / 'migrations')).walk_revisions()}
+    if revision in known:
+        # Already managed by Alembic: let `flask db upgrade` apply newer migrations.
+        # Validating here would reject columns those migrations are about to add.
+        return
     # v1.3.1 and early v1.4 created migration IDs dynamically. Accept their
     # schema shape, not an arbitrary claimed revision number or a partial schema.
     validate_schema(connection, legacy=True)

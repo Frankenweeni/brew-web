@@ -3,6 +3,7 @@
 <h1>All Batches</h1>
 
 {% for type, group in [
+    ("In progress", in_progress_batches),
     ("Mead", mead_batches),
     ("Wine", wine_batches),
     ("Beer", beer_batches),
@@ -10,7 +11,8 @@
     ("Other", other_batches)
 ] if group %}
   <h2>
-    {% if type == "Mead" %}🍯 Mead
+    {% if type == "In progress" %}🕒 In progress
+	{% elif type == "Mead" %}🍯 Mead
 	{% elif type == "Wine" %}🍷 Wine
 	{% elif type == "Beer" %}🍺 Beer
 	{% elif type == "Hard Cider" %}🍎 Hard Cider

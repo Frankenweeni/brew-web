@@ -1,0 +1,66 @@
+{# "What's happening now" overview at the top of the home page. Every section is always shown, with a short note when empty. #}
+{% set metric = unit_preference == 'metric' %}
+<section class="home-now">
+  <h1>Brewing now</h1>
+  <p class="home-meta">{{ status.today.strftime('%A %d %B %Y') }}</p>
+
+  <h2>🕒 In progress ({{ status.active|length }})</h2>
+  {% if status.active %}
+  <div class="home-grid">
+    {% for a in status.active %}
+    <a class="home-card" href="{{ url_for('routes.batches_bp.view_batch', batch_id=a.batch.id) }}">
+      <h3>{{ a.icon }} {{ a.batch.name }}</h3>
+      <p class="home-meta">{{ a.type }}{% if a.day %} · day {{ a.day }}{% endif %}</p>
+      <dl class="home-facts">
+        <dt>Gravity</dt>
+        <dd>{% if a.sg is not none %}{{ '%.3f'|format(a.sg) }} <span class="home-meta">({{ a.sg_date.strftime('%d %b') }})</span>{% else %}—{% endif %}</dd>
+        <dt>Est. ABV</dt>
+        <dd>{{ '%.1f %%'|format(a.abv) if a.abv is not none else '—' }}</dd>
+        <dt>Last log</dt>
+        <dd>{% if a.last_log %}{{ a.last_log.notes }} <span class="home-meta">({{ a.last_log.date.strftime('%d %b') }})</span>{% else %}—{% endif %}</dd>
+        <dt>Hydrometer</dt>
+        <dd>
+          {% if a.hydrometer_linked and a.live %}
+            📡 SG {{ '%.3f'|format(a.live.sg) }},
+            {% if a.live.temp_c is not none %}{{ '%.1f °C'|format(a.live.temp_c) if metric else '%.1f °F'|format(a.live.temp_c * 9 / 5 + 32) }},{% endif %}
+            {{ a.live.time.strftime('%d %b %H:%M') }}
+          {% elif a.hydrometer_linked %}📡 Linked, waiting for the first reading
+          {% else %}—{% endif %}
+        </dd>
+      </dl>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p>Nothing fermenting right now.
+    {% if current_user.role in ['admin', 'editor'] %}<a href="{{ url_for('routes.batches_bp.new_batch') }}">➕ Start a batch</a>{% endif %}</p>
+  {% endif %}
+
+  <h2>📅 Coming up (next 14 days)</h2>
+  {% if status.upcoming %}
+  <ul class="home-list">
+    {% for e in status.upcoming %}
+    <li><strong>{{ e.start.strftime('%a %d %b') }}</strong> · {{ e.title }}</li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>Nothing planned. <a href="{{ url_for('routes.calendar_bp.calendar') }}">Open the calendar</a></p>
+  {% endif %}
+
+  <h2>✅ Finished in the last 30 days</h2>
+  {% if status.finished %}
+  <ul class="home-list">
+    {% for b in status.finished %}
+    <li><a href="{{ url_for('routes.batches_bp.view_batch', batch_id=b.id) }}">{{ b.name }}</a>
+      · {{ b.end_date.strftime('%d %b') }}{% if b.abv is not none %} · {{ '%.1f %%'|format(b.abv) }}{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>Nothing finished recently.</p>
+  {% endif %}
+
+  <p class="home-meta">📡 Brew Monk hydrometer:
+    {{ status.hydrometer_status or 'not set up' }}{% if status.hydrometer_sync %} (checked {{ status.hydrometer_sync.strftime('%H:%M') }}){% endif %}</p>
+</section>
+
+<hr>

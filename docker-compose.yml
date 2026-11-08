@@ -120,6 +120,7 @@ services:
         condition: service_healthy
     volumes:
       - ./logs:/app/logs
+      - ./instance:/app/instance
     read_only: true
     tmpfs:
       - /tmp

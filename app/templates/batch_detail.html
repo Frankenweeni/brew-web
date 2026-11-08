@@ -68,6 +68,8 @@
 </p>
 <p><strong>Notes:</strong><br/> {{ batch.notes | nl2br if batch.notes else 'None' }}</p>
 <hr/>
+{% include '_brewmonk_card.html' %}
+
 <h2>Measurements</h2>
 
 {% if batch.measurements %}

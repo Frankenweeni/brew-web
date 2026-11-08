@@ -72,5 +72,4 @@ def settings_brewmonk():
             flash('Brew Monk settings saved.', 'success')
         return redirect(url_for('routes.settings_bp.settings_brewmonk'))
 
-    batches = Batch.query.filter(Batch.end_date.is_(None)).order_by(Batch.start_date.desc()).all()
-    return render_template('settings/settings_brewmonk.html', s=s, batches=batches)
+    return render_template('settings/settings_brewmonk.html', s=s)
