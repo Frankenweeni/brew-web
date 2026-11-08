@@ -3,7 +3,7 @@
 {% block content %}
 <div style="flex: 1;">
   <h2>Brew Monk Hydrometer</h2>
-  <p>Readings from your Brew Monk Wi-Fi hydrometer are copied from myBrewMonk into the batch you pick below, as one measurement per day that updates with the latest reading.</p>
+  <p>Every 15 minutes Brew Web copies the latest reading from myBrewMonk into the batch you pick below. Each day gets one measurement, updated with the newest reading.</p>
 
   <form method="POST" autocomplete="off">
     <input name="csrf_token" type="hidden" value="{{ csrf_token() }}"/>
@@ -30,11 +30,11 @@
     </div>
 
     <button class="btn btn-primary" type="submit" name="action" value="save">Save</button>
-    <button class="btn btn-secondary" type="submit" name="action" value="test">Save and test login</button>
+    <button class="btn btn-secondary" type="submit" name="action" value="sync">Save and sync now</button>
   </form>
 
-  <h3 style="margin-top: 2em;">Status</h3>
-  <p><strong>Last sync:</strong> {{ s.brewmonk_last_sync.strftime('%Y-%m-%d %H:%M') if s.brewmonk_last_sync else 'Never' }}</p>
+  <h3 style="margin-top: 2em;">Latest sync</h3>
+  <p><strong>Time:</strong> {{ s.brewmonk_last_sync.strftime('%Y-%m-%d %H:%M') if s.brewmonk_last_sync else 'Never' }}</p>
   <p><strong>Result:</strong> {{ s.brewmonk_last_status or '—' }}</p>
 </div>
 {% endblock %}

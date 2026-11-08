@@ -1,8 +1,11 @@
 import logging
+
+import click
 import os
 from logging.handlers import RotatingFileHandler
 
 from flask import Flask, redirect, url_for, request, render_template
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask.cli import with_appcontext
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -25,6 +28,7 @@ csrf = CSRFProtect()
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -211,10 +215,14 @@ def create_app():
     def internal_error(error):
         return log_error_and_render(error, "errors/500.html", 500)
 
-    @app.cli.command("brewmonk-probe")
-    def brewmonk_probe():
-        from app.brewmonk import probe
-        probe()
+    @app.cli.command("brewmonk-sync")
+    @click.option("--loop", is_flag=True, help="Keep syncing every 15 minutes")
+    def brewmonk_sync(loop):
+        from app.brewmonk import sync, sync_forever
+        if loop:
+            sync_forever()
+        else:
+            print(sync())
 
     @app.cli.command("seed-yeasts")
     @with_appcontext

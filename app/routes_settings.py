@@ -54,26 +54,20 @@ def settings_password():
 @login_required
 @role_required('admin')
 def settings_brewmonk():
-    from app.brewmonk import get_settings, login, BrewMonkError
+    from app.brewmonk import get_settings, encrypt_password, sync
 
     s = get_settings()
     if request.method == 'POST':
         s.brewmonk_username = (request.form.get('username') or '').strip() or None
         password = request.form.get('password') or ''
         if password:
-            s.brewmonk_password = password
+            s.brewmonk_password = encrypt_password(password)
         batch_id = request.form.get('batch_id') or ''
         s.brewmonk_batch_id = int(batch_id) if batch_id.isdigit() else None
         db.session.commit()
 
-        if request.form.get('action') == 'test':
-            try:
-                login(s.brewmonk_username, s.brewmonk_password)
-                flash('Logged in to myBrewMonk successfully.', 'success')
-            except BrewMonkError as e:
-                flash(str(e), 'danger')
-            except Exception:
-                flash('Could not reach myBrewMonk, try again later.', 'danger')
+        if request.form.get('action') == 'sync':
+            flash(sync(), 'info')
         else:
             flash('Brew Monk settings saved.', 'success')
         return redirect(url_for('routes.settings_bp.settings_brewmonk'))

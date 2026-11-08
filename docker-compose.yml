@@ -1,4 +1,4 @@
-name: brewweb-docker
+name: brew-web
 
 services:
   web:
@@ -15,7 +15,7 @@ services:
     ports:
       - "${BREWWEB_BIND:-127.0.0.1}:${BREWWEB_PORT:-4452}:4452"
     environment:
-      TZ: ${TZ:-America/New_York}
+      TZ: ${TZ:-Europe/Oslo}
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env before starting Brew-Web}
       POSTGRES_HOST: db
       POSTGRES_USER: ${POSTGRES_USER:-brewuser}
@@ -85,6 +85,7 @@ services:
       - no-new-privileges:true
 
   caddy:
+    profiles: ["lan"]
     build: ./caddy
     restart: unless-stopped
     ports:
@@ -97,6 +98,43 @@ services:
       - caddy_config:/config
     depends_on:
       - web
+    security_opt:
+      - no-new-privileges:true
+
+  brewmonk:
+    image: ${BREWWEB_IMAGE:-ghcr.io/anndrox/brew-web:latest}
+    restart: unless-stopped
+    init: true
+    entrypoint: ["flask", "brewmonk-sync", "--loop"]
+    healthcheck:
+      disable: true
+    environment:
+      TZ: ${TZ:-Europe/Oslo}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env before starting Brew-Web}
+      POSTGRES_HOST: db
+      POSTGRES_USER: ${POSTGRES_USER:-brewuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-brewweb}
+    depends_on:
+      web:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN:?Set CF_TUNNEL_TOKEN in .env}
+    depends_on:
+      - web
+    read_only: true
     security_opt:
       - no-new-privileges:true
 
