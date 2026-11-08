@@ -11,6 +11,11 @@
       <li style="margin-bottom: 10px;">
         <a href="{{ url_for('routes.settings_bp.settings_customize') }}" {% if request.endpoint == 'routes.settings_bp.settings_customize' %}style="font-weight: bold;"{% endif %}>🎨 Customize</a>
       </li>
+      {% if current_user.role == 'admin' %}
+      <li style="margin-bottom: 10px;">
+        <a href="{{ url_for('routes.settings_bp.settings_brewmonk') }}" {% if request.endpoint == 'routes.settings_bp.settings_brewmonk' %}style="font-weight: bold;"{% endif %}>🍺 Brew Monk Hydrometer</a>
+      </li>
+      {% endif %}
       <li>
         <a href="{{ url_for('routes.settings_bp.settings_password') }}" {% if request.endpoint == 'routes.settings_bp.settings_password' %}style="font-weight: bold;"{% endif %}>🔑 Change Password</a>
       </li>

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="flex: 1;">
+  <h2>Brew Monk Hydrometer</h2>
+  <p>Readings from your Brew Monk Wi-Fi hydrometer are copied from myBrewMonk into the batch you pick below, as one measurement per day that updates with the latest reading.</p>
+
+  <form method="POST" autocomplete="off">
+    <input name="csrf_token" type="hidden" value="{{ csrf_token() }}"/>
+
+    <div class="mb-3">
+      <label class="form-label" for="username">myBrewMonk username</label>
+      <input class="form-control" type="text" id="username" name="username" value="{{ s.brewmonk_username or '' }}" autocomplete="off">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="password">myBrewMonk password</label>
+      <input class="form-control" type="password" id="password" name="password" autocomplete="new-password"
+             placeholder="{{ 'Saved, leave empty to keep it' if s.brewmonk_password else '' }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="batch_id">Hydrometer is in batch</label>
+      <select class="form-control" id="batch_id" name="batch_id">
+        <option value="">Not in a batch (don't log)</option>
+        {% for b in batches %}
+          <option value="{{ b.id }}" {% if s.brewmonk_batch_id == b.id %}selected{% endif %}>{{ b.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button class="btn btn-primary" type="submit" name="action" value="save">Save</button>
+    <button class="btn btn-secondary" type="submit" name="action" value="test">Save and test login</button>
+  </form>
+
+  <h3 style="margin-top: 2em;">Status</h3>
+  <p><strong>Last sync:</strong> {{ s.brewmonk_last_sync.strftime('%Y-%m-%d %H:%M') if s.brewmonk_last_sync else 'Never' }}</p>
+  <p><strong>Result:</strong> {{ s.brewmonk_last_status or '—' }}</p>
+</div>
+{% endblock %}

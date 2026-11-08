@@ -126,6 +126,11 @@ class AppSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     base_url = db.Column(db.String(255))
     unit_preference = db.Column(db.String(10), default='imperial')  # 'imperial' or 'metric'
+    brewmonk_username = db.Column(db.String(255))
+    brewmonk_password = db.Column(db.String(255))
+    brewmonk_batch_id = db.Column(db.Integer)
+    brewmonk_last_sync = db.Column(db.DateTime)
+    brewmonk_last_status = db.Column(db.String(255))
 
 
 class GeneralNote(db.Model):

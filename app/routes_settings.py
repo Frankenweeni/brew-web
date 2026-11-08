@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app.utils import is_strong_password
-from .models import db
+from app.utils import role_required
+from .models import db, Batch
 
 settings_bp = Blueprint('settings_bp', __name__, url_prefix='/settings')
 
@@ -47,3 +48,35 @@ def settings_password():
             return redirect(url_for('routes.settings_bp.settings_password'))
 
     return render_template('settings/settings_password.html')
+
+
+@settings_bp.route('/brewmonk', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def settings_brewmonk():
+    from app.brewmonk import get_settings, login, BrewMonkError
+
+    s = get_settings()
+    if request.method == 'POST':
+        s.brewmonk_username = (request.form.get('username') or '').strip() or None
+        password = request.form.get('password') or ''
+        if password:
+            s.brewmonk_password = password
+        batch_id = request.form.get('batch_id') or ''
+        s.brewmonk_batch_id = int(batch_id) if batch_id.isdigit() else None
+        db.session.commit()
+
+        if request.form.get('action') == 'test':
+            try:
+                login(s.brewmonk_username, s.brewmonk_password)
+                flash('Logged in to myBrewMonk successfully.', 'success')
+            except BrewMonkError as e:
+                flash(str(e), 'danger')
+            except Exception:
+                flash('Could not reach myBrewMonk, try again later.', 'danger')
+        else:
+            flash('Brew Monk settings saved.', 'success')
+        return redirect(url_for('routes.settings_bp.settings_brewmonk'))
+
+    batches = Batch.query.filter(Batch.end_date.is_(None)).order_by(Batch.start_date.desc()).all()
+    return render_template('settings/settings_brewmonk.html', s=s, batches=batches)

@@ -43,6 +43,7 @@
 							<ul id="settings-menu" style="display: {{ 'block' if request.args.get('open') == 'settings' else 'none' }}; list-style: none; margin-left: 15px; padding-left: 0;">
 							{% if current_user.is_authenticated and current_user.role == 'admin' %}
 							  <li><a href="{{ url_for('routes.admin_bp.admin_settings', open='settings') }}">Administration</a></li>
+                              <li><a href="{{ url_for('routes.settings_bp.settings_brewmonk', open='settings') }}">Brew Monk Hydrometer</a></li>
 							{% endif %}
 							<li><a href="{{ url_for('routes.settings_bp.settings_customize', open='settings') }}">Customize</a></li>
 							<li><a href="{{ url_for('routes.settings_bp.settings_password', open='settings') }}">Change Password</a></li>

@@ -209,6 +209,11 @@ def create_app():
     def internal_error(error):
         return log_error_and_render(error, "errors/500.html", 500)
 
+    @app.cli.command("brewmonk-probe")
+    def brewmonk_probe():
+        from app.brewmonk import probe
+        probe()
+
     @app.cli.command("seed-yeasts")
     @with_appcontext
     def seed_yeasts():
