@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Notes</h1>
+{% set can_edit = current_user.role in ['admin', 'editor'] %}
+{% for key, label in categories %}
+  {% set note = notes.get(key) %}
+  <h2 id="notes-{{ key | replace(' ', '-') }}">{{ label }}</h2>
+  <form method="POST" action="{{ url_for('routes.notes_bp.save_notes', category=key) }}" style="margin-bottom: 2em;">
+    <input name="csrf_token" type="hidden" value="{{ csrf_token() }}"/>
+    <textarea name="content" rows="6" style="width: 100%; box-sizing: border-box; resize: vertical;"
+      {% if not can_edit %}readonly{% endif %}>{{ note.content if note and note.content else '' }}</textarea>
+    <div style="display: flex; align-items: center; gap: 1em; flex-wrap: wrap; margin-top: 0.5em;">
+      {% if can_edit %}
+        <button class="btn btn-primary" type="submit">Save</button>
+      {% endif %}
+      <span style="opacity: 0.7; font-size: 0.9em;">
+        {% if note and note.updated_at %}Last saved {{ note.updated_at.strftime('%Y-%m-%d %H:%M') }} UTC{% else %}Not saved yet{% endif %}
+      </span>
+    </div>
+  </form>
+{% endfor %}
+{% endblock %}

@@ -11,6 +11,7 @@ from .routes_recipes import recipes_bp
 from .routes_settings import settings_bp
 from .routes_stats import stats_bp
 from .routes_yeast import yeast_bp
+from .routes_notes import notes_bp
 
 routes = Blueprint("routes", __name__, url_prefix="/app")
 
@@ -87,3 +88,4 @@ routes.register_blueprint(recipes_bp)
 routes.register_blueprint(settings_bp)
 routes.register_blueprint(stats_bp)
 routes.register_blueprint(yeast_bp)
+routes.register_blueprint(notes_bp)

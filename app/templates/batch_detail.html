@@ -86,7 +86,7 @@
       {% for m in batch.measurements|sort(attribute='date') %}
       <tr style="background-color: {% if loop.index0 % 2 == 0 %}#111{% else %}#1a1a1a{% endif %}; color: #eee;">
 <td data-label="Date" style="padding: 10px;">{{ m.date.strftime('%Y-%m-%d') if m.date else '—' }}</td>
-<td data-label="Gravity" style="padding: 10px;">{{ m.gravity if m.gravity is not none else 'N/A' }}</td>
+<td data-label="Gravity" style="padding: 10px;">{{ m.gravity | sg }}</td>
 <td data-label="pH" style="padding: 10px;">{{ m.ph if m.ph is not none else 'N/A' }}</td>
 <td data-label="Temp" style="padding: 10px;">
   {% if m.temperature is not none %}

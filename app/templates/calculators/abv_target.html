@@ -27,7 +27,7 @@
   {% else %}
     <h3>Result</h3>
     <p>Add approximately <strong>{{ result.amount }} {{ result.unit }}</strong> of honey.</p>
-    <p>New target OG: <strong>{{ result.target_og }}</strong></p>
+    <p>New target OG: <strong>{{ result.target_og | sg }}</strong></p>
   {% endif %}
 {% endif %}
 

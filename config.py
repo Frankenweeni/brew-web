@@ -1,3 +1,4 @@
+from datetime import timedelta
 import os
 
 from sqlalchemy.engine import URL
@@ -42,5 +43,8 @@ class Config:
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = 'Lax'
     REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
+    # Stay logged in (installed PWA closes often, which drops plain session cookies)
+    REMEMBER_COOKIE_DURATION = timedelta(days=365)
+    PERMANENT_SESSION_LIFETIME = timedelta(days=365)
 
     RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://')

@@ -109,6 +109,16 @@ def create_app():
             "update_info": check_for_updates()
         }
 
+    @app.template_filter('sg')
+    def sg_filter(value, default='N/A'):
+        # Specific gravity always shown with 3 decimals (1.030, not 1.03)
+        if value is None or value == '':
+            return default
+        try:
+            return '%.3f' % float(value)
+        except (TypeError, ValueError):
+            return value
+
     @app.template_filter('nl2br')
     def nl2br_filter(s):
         return Markup('<br>'.join(escape(s).splitlines()))

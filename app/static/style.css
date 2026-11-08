@@ -320,3 +320,33 @@ form label:has(input[type="radio"]) {
   align-items: center;
   padding: 6px 0;
 }
+
+
+/* --- Button-styled links (e.g. View/Edit on list rows) --- */
+a.button-link {
+  display: inline-block;
+  font-size: 1em;
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid #a77c3b;
+  background-color: #3e2a17;
+  color: #f4e8c1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+a.button-link:hover {
+  background-color: #5b3a1a;
+}
+body.light-mode a.button-link {
+  background-color: #eee;
+  color: #111;
+  border-color: #999;
+}
+body.light-mode a.button-link:hover {
+  background-color: #ddd;
+}
+.row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

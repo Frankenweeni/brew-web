@@ -63,7 +63,12 @@
 		{% endif %}
         </td>
         <td data-label="" style="padding: 10px; border: 1px solid #444;">
-          <a href="{{ url_for("routes.batches_bp.view_batch", batch_id=batch.id) }}" style="color: #4eaaff;">View</a>
+          <div class="row-actions">
+            <a class="button-link" href="{{ url_for("routes.batches_bp.view_batch", batch_id=batch.id) }}">👁️ View</a>
+            {% if current_user.role in ['admin', 'editor'] %}
+            <a class="button-link" href="{{ url_for("routes.batches_bp.edit_batch", batch_id=batch.id) }}">✏️ Edit</a>
+            {% endif %}
+          </div>
         </td>
       </tr>
       {% endfor %}

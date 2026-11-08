@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
 
 from . import db, limiter
@@ -74,7 +74,8 @@ def setup():
         if os.path.exists(flag_path):
             os.remove(flag_path)
 
-        login_user(user)
+        session.permanent = True
+        login_user(user, remember=True)
         flash('Admin account created and logged in.', 'success')
         return redirect(url_for('routes.index'))
 
@@ -89,7 +90,8 @@ def login():
         user = User.query.filter_by(username=username).first()
 
         if user and user.check_password(password):
-            login_user(user)
+            session.permanent = True
+            login_user(user, remember=True)
             return redirect(url_for('routes.index'))
         else:
             flash('Invalid credentials', 'danger')

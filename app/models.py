@@ -63,7 +63,7 @@ class Batch(db.Model):
     flavor_additions = db.Column(db.Text)
     pectic_used = db.Column(db.Boolean)
     priming_sugar_amount = db.Column(db.Float, comment="Priming/carbonation sugar added before bottling, in grams")
-    priming_sugar_type = db.Column(db.String(20))
+    priming_sugar_type = db.Column(db.String(50))
     notes = db.Column(db.Text)
     water_type = db.Column(db.String(50))
     alcohol_type = db.Column(db.String(20))
@@ -126,3 +126,10 @@ class AppSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     base_url = db.Column(db.String(255))
     unit_preference = db.Column(db.String(10), default='imperial')  # 'imperial' or 'metric'
+
+
+class GeneralNote(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(20), unique=True)
+    content = db.Column(db.Text)
+    updated_at = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
